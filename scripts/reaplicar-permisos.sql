@@ -1,0 +1,102 @@
+-- Reaplica TODOS los privilegios de la aplicación. Úsese tras restaurar un respaldo
+-- (pg_dump --no-privileges no incluye grants): psql -v ON_ERROR_STOP=1 -f scripts/reaplicar-permisos.sql "$DATABASE_ADMIN_URL"
+-- Requiere que existan los roles app_server y authenticated. Es idempotente.
+
+-- Funciones: nadie por defecto (PUBLIC), sólo los roles de abajo.
+revoke execute on function
+  app.uid(), app.rol_actual(), app.mis_propietarios(), app.sesion_actual(), app.usuarios_dev_login(),
+  app.estatus_cargo(numeric, numeric, date), app.dias_atraso(numeric, numeric, date),
+  app.estatus_contrato(estatus_contrato, date),
+  app.estatus_contrato(estatus_contrato, date, boolean),
+  app.renta_vigente(numeric, numeric, date, date),
+  generar_cargos_renta(date),
+  registrar_pago(uuid[], numeric, date, text, text, cuenta_destino, text),
+  cancelar_pago(uuid, text), actualizar_monto_cargo(uuid, numeric),
+  preparar_liquidacion(uuid, date), cerrar_liquidacion(uuid),
+  pagar_liquidacion(uuid, date, text, text), registrar_pdf_liquidacion(uuid, text),
+  registrar_ajuste(uuid, numeric, text), registrar_comprobante_pago(uuid, text)
+from public;
+revoke execute on function
+  app.tg_cargos_propietario(), app.tg_cargos_solo_notas(),
+  app.tg_unidades_propietario(), app.tg_contratos_propietario(),
+  app.tg_inmuebles_propaga(), app.tg_unidades_propaga(),
+  app.tg_gastos_propietario(), app.tg_gastos_solo_admin_borra(), app.tg_gastos_liquidado(),
+  app.tg_liquidaciones_inmutable(), app.tg_liquidacion_lineas_inmutable(),
+  app.reconstruir_liquidacion(uuid), app.bloquear_liquidaciones(uuid),
+  app.registrar_bitacora(), app.tg_bitacora_inmutable(), app.tg_documentos_solo_metadatos(),
+  app.tg_documentos_consistencia(), app.tg_contratos_cargos_desde()
+from public;
+
+-- Producción: /dev-login no existe. (En desarrollo local, descomentar para habilitarlo.)
+revoke execute on function app.usuarios_dev_login() from app_server, authenticated;
+-- grant execute on function app.usuarios_dev_login() to app_server;
+
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'anon') then
+    -- anon (visitante sin sesión) no debe poder tocar nada.
+    revoke all on all tables in schema public from anon;
+    revoke all on all sequences in schema public from anon;
+    revoke execute on all functions in schema public from anon;
+    revoke usage on schema app from anon;
+    revoke execute on all functions in schema app from anon;
+  end if;
+
+  -- authenticated: se quita todo y se vuelve a otorgar sólo lo necesario (abajo). Incluye TRUNCATE
+  -- (no pasa por RLS ni bitácora) y escritura sobre pagos, liquidaciones, bitácora y vistas.
+  revoke all on all tables in schema public from authenticated;
+  revoke all on all sequences in schema public from authenticated;
+  revoke truncate on all tables in schema public from app_server;
+
+  -- Objetos futuros: sin privilegios automáticos. Las migraciones las ejecuta el rol `postgres` en
+  -- Supabase; si las ejecutara otro rol, repetir estas sentencias con `for role <ese rol>`.
+  if exists (select 1 from pg_roles where rolname = 'postgres') then
+    alter default privileges for role postgres in schema public revoke all on tables from anon, authenticated;
+    alter default privileges for role postgres in schema public revoke all on sequences from anon, authenticated;
+    alter default privileges for role postgres in schema public revoke execute on functions from anon, authenticated;
+  end if;
+end
+$$;
+
+-- Privilegios exactos de la aplicación (los mismos que otorgan 0001–0009).
+grant usage on schema public to app_server, authenticated;
+grant usage on schema app to app_server, authenticated;
+
+grant select, insert, update, delete on
+  usuarios, propietarios, propietario_usuarios, inmuebles, unidades, inquilinos, contratos,
+  cargos, gastos, documentos
+to app_server, authenticated;
+
+-- El dinero y la bitácora sólo se leen; se escriben únicamente vía funciones security definer.
+grant select on
+  pagos, pago_aplicaciones, liquidaciones, liquidacion_lineas, ajustes_pendientes, bitacora
+to app_server, authenticated;
+grant select, insert on avisos_enviados to app_server, authenticated;
+
+grant select on
+  v_cargos, v_contratos,
+  portal_propietario, portal_resumen_unidades, portal_contratos,
+  portal_liquidaciones, portal_liquidacion_lineas, portal_documentos
+to app_server, authenticated;
+
+grant execute on function app.uid(), app.rol_actual(), app.mis_propietarios(), app.sesion_actual()
+  to app_server, authenticated;
+grant execute on function
+  app.estatus_cargo(numeric, numeric, date),
+  app.dias_atraso(numeric, numeric, date),
+  app.estatus_contrato(estatus_contrato, date),
+  app.estatus_contrato(estatus_contrato, date, boolean),
+  app.renta_vigente(numeric, numeric, date, date)
+to app_server, authenticated;
+grant execute on function
+  generar_cargos_renta(date),
+  registrar_pago(uuid[], numeric, date, text, text, cuenta_destino, text),
+  cancelar_pago(uuid, text),
+  actualizar_monto_cargo(uuid, numeric),
+  preparar_liquidacion(uuid, date),
+  cerrar_liquidacion(uuid),
+  pagar_liquidacion(uuid, date, text, text),
+  registrar_pdf_liquidacion(uuid, text),
+  registrar_ajuste(uuid, numeric, text),
+  registrar_comprobante_pago(uuid, text)
+to app_server, authenticated;

@@ -1,0 +1,4 @@
+ref,nombre,email,telefono,rfc
+INQ-001,Inquilino Ejemplo A,inquilino.a@ejemplo.com,5555550201,
+INQ-002,Inquilino Ejemplo B,inquilino.b@ejemplo.com,5555550202,XAXX010101000
+INQ-003,Inquilino Ejemplo C,,5555550203,

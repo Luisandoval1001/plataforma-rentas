@@ -1,0 +1,44 @@
+{
+  "name": "plataforma-rentas",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:db": "vitest run tests/db",
+    "db:start": "bash scripts/db-local.sh start",
+    "db:reset": "bash scripts/db-local.sh reset rentas_test",
+    "migrate": "tsx scripts/migrate.ts",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@react-pdf/renderer": "^4.9.0",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.118.0",
+    "dotenv": "^18.0.9",
+    "next": "16.4.5",
+    "postgres": "^4.0.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "resend": "^6.37.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^5.1.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.5",
+    "pdf-parse": "^2.4.5",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^5.1.0"
+  }
+}

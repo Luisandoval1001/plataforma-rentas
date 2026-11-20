@@ -1,0 +1,4 @@
+ref,unidad_ref,inquilino_ref,fecha_inicio,fecha_fin,renta_mensual,dia_pago,deposito,incremento_anual_pct,estatus,primer_periodo_cargo
+CON-001,UNI-001,INQ-001,2026-01-01,2026-12-31,12000,5,12000,5,vigente,2026-11
+CON-002,UNI-002,INQ-002,2026-03-01,2027-02-28,9500,10,9500,0,vigente,
+CON-003,UNI-003,INQ-003,2026-12-01,2027-11-30,18000,1,18000,4,pendiente_firma,
